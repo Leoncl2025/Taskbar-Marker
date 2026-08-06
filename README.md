@@ -1,5 +1,10 @@
 # Taskbar Marker
 
+[![Release](https://img.shields.io/github/v/release/Leoncl2025/Taskbar-Marker?display_name=tag)](https://github.com/Leoncl2025/Taskbar-Marker/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Leoncl2025/Taskbar-Marker/total)](https://github.com/Leoncl2025/Taskbar-Marker/releases)
+[![License](https://img.shields.io/github/license/Leoncl2025/Taskbar-Marker)](LICENSE)
+[![Windows 11](https://img.shields.io/badge/platform-Windows%2011-0078D4)](https://www.microsoft.com/windows/windows-11)
+
 Color-code and label individual taskbar buttons on Windows 11 — so two windows of the
 *same* app (two Remote Desktop sessions, two VS Code workspaces, two Chrome profiles)
 stop looking identical.
@@ -8,6 +13,21 @@ No DLL injection, no hooking, no admin rights. It reads the taskbar through
 UI Automation and paints a click-through overlay on top of it.
 
 ![two Remote Desktop buttons marked red and green with labels](docs/example.png)
+
+## Download
+
+Download the latest portable build from [GitHub Releases](https://github.com/Leoncl2025/Taskbar-Marker/releases/latest),
+extract `TaskbarMarker-win-x64.zip`, and run `TaskbarMarker.exe`. The release bundles the
+.NET 8 runtime and requires neither installation nor administrator rights.
+
+Each release includes a `.sha256` file. To verify the downloaded archive:
+
+```powershell
+(Get-FileHash .\TaskbarMarker-win-x64.zip -Algorithm SHA256).Hash
+```
+
+Compare the result with `TaskbarMarker-win-x64.zip.sha256` on the release page. The
+executable is currently unsigned, so Windows SmartScreen may show a warning on first run.
 
 ## How it works
 
@@ -22,14 +42,16 @@ UI Automation and paints a click-through overlay on top of it.
 Nothing is injected into `explorer.exe`, so a Windows update can't crash your shell —
 worst case the overlay stops appearing.
 
-## Build and run
+## Build from source
+
+Requires the .NET 8 SDK:
 
 ```powershell
 dotnet build -c Release
 .\bin\Release\net8.0-windows\TaskbarMarker.exe
 ```
 
-Requires the .NET 8 Desktop Runtime. The app lives in the system tray.
+The app lives in the system tray.
 
 ## Writing rules
 

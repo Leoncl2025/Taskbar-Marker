@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish Windows x64 package
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP "publish"
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE "artifacts"
+          New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+
+          dotnet publish TaskbarMarker.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            --output $publishDir
+
+          $archiveName = "TaskbarMarker-win-x64.zip"
+          $archivePath = Join-Path $artifactDir $archiveName
+          Compress-Archive -Path (Join-Path $publishDir "*") -DestinationPath $archivePath
+
+          $hash = (Get-FileHash $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path "$archivePath.sha256" -Value "$hash  $archiveName" -Encoding ascii -NoNewline
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            artifacts/TaskbarMarker-win-x64.zip `
+            artifacts/TaskbarMarker-win-x64.zip.sha256 `
+            --title "Taskbar Marker $env:GITHUB_REF_NAME" `
+            --generate-notes `
+            --verify-tag
