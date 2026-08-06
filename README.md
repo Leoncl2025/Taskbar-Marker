@@ -126,3 +126,7 @@ rule each one matched. Useful when a rule does not fire:
 | `Settings.cs` | `rules.json` model, matching, load/save |
 | `Diagnostics.cs` | `--list` report |
 | `Native.cs` | Win32 interop |
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
