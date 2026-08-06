@@ -1,0 +1,25 @@
+{
+  "pollIntervalMs": 750,
+  "barHeight": 4,
+  "barInset": 6,
+  "showLabel": true,
+  "labelFontSize": 9,
+  "includeAllButtons": false,
+  "rules": [
+    {
+      "matchAppId": "Windows365:11111111",
+      "color": "#E53935",
+      "label": "task1"
+    },
+    {
+      "matchAppId": "Windows365:22222222",
+      "color": "#43A047",
+      "label": "investing"
+    },
+    {
+      "match": "Visual Studio Code",
+      "color": "#1E88E5",
+      "label": "code"
+    }
+  ]
+}

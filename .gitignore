@@ -1,0 +1,11 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+publish/
+
+# Per-user data. This file can contain machine names and connection IDs.
+rules.json
+docs/editor.png
+docs/rule-dialog.png
