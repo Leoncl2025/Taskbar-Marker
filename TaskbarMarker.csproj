@@ -10,7 +10,7 @@
     <AssemblyName>TaskbarMarker</AssemblyName>
     <Product>Taskbar Marker</Product>
     <Description>Color-code and label individual Windows taskbar buttons.</Description>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Leon C</Authors>
     <RepositoryUrl>https://github.com/Leoncl2025/Taskbar-Marker</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
