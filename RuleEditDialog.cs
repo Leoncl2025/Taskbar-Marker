@@ -42,24 +42,23 @@ internal sealed class RuleEditDialog : Form
         MinimizeBox = false;
         MaximizeBox = true;
         ShowInTaskbar = false;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        Font = SystemFonts.MessageBoxFont!;
         ClientSize = new Size(840, 640);
         MinimumSize = new Size(720, 600);
         SizeGripStyle = SizeGripStyle.Show;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        Font = SystemFonts.MessageBoxFont!;
 
         var pickLabel = new Label
         {
             Text = "Pick a taskbar button (or leave it and type a pattern below):",
-            Location = new Point(12, 12),
             AutoSize = true,
+            Margin = new Padding(0, 0, 0, 4),
         };
 
         _buttonList = new ListView
         {
-            Location = new Point(12, 34),
-            Size = new Size(816, 315),
-            Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 8),
             View = View.Details,
             FullRowSelect = true,
             MultiSelect = false,
@@ -74,33 +73,31 @@ internal sealed class RuleEditDialog : Form
         var refreshButton = new Button
         {
             Text = "Refresh",
-            Location = new Point(12, 357),
-            Size = new Size(90, 26),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            AutoSize = true,
+            MinimumSize = new Size(90, 32),
+            Margin = new Padding(0, 0, 8, 0),
         };
         refreshButton.Click += async (_, _) => await LoadButtonsAsync();
 
         _hint = new Label
         {
-            Location = new Point(110, 360),
-            Size = new Size(718, 26),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
             ForeColor = SystemColors.GrayText,
             AutoEllipsis = true,
+            TextAlign = ContentAlignment.MiddleLeft,
         };
 
         var matchLabel = new Label
         {
             Text = "Match name (regex)",
-            Location = new Point(12, 397),
             AutoSize = true,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            Margin = new Padding(0, 0, 0, 3),
         };
         _matchBox = new TextBox
         {
-            Location = new Point(12, 417),
-            Size = new Size(816, 23),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 10),
             Text = Rule.Match ?? "",
         };
         _matchBox.TextChanged += (_, _) => UpdateOkState();
@@ -108,15 +105,13 @@ internal sealed class RuleEditDialog : Form
         var appIdLabel = new Label
         {
             Text = "Match app id (regex)",
-            Location = new Point(12, 453),
             AutoSize = true,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            Margin = new Padding(0, 0, 0, 3),
         };
         _matchAppIdBox = new TextBox
         {
-            Location = new Point(12, 473),
-            Size = new Size(816, 23),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 10),
             Text = Rule.MatchAppId ?? "",
         };
         _matchAppIdBox.TextChanged += (_, _) => UpdateOkState();
@@ -124,39 +119,38 @@ internal sealed class RuleEditDialog : Form
         var labelLabel = new Label
         {
             Text = "Label (optional)",
-            Location = new Point(12, 509),
             AutoSize = true,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            Margin = new Padding(0, 0, 0, 3),
         };
         _labelBox = new TextBox
         {
-            Location = new Point(12, 529),
-            Size = new Size(260, 23),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
             Text = Rule.Label ?? "",
         };
 
         var colorLabel = new Label
         {
             Text = "Color",
-            Location = new Point(292, 509),
             AutoSize = true,
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            Margin = new Padding(0, 0, 0, 3),
         };
         _colorPreview = new Panel
         {
-            Location = new Point(292, 529),
             Size = new Size(40, 23),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            MinimumSize = new Size(40, 23),
+            Anchor = AnchorStyles.Left,
+            Margin = Padding.Empty,
             BackColor = _color,
             BorderStyle = BorderStyle.FixedSingle,
         };
 
         var swatches = new FlowLayoutPanel
         {
-            Location = new Point(340, 527),
-            Size = new Size(194, 28),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(8, 0, 8, 0),
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             AutoScroll = false,
@@ -178,9 +172,10 @@ internal sealed class RuleEditDialog : Form
         var customColorButton = new Button
         {
             Text = "Custom...",
-            Location = new Point(728, 527),
-            Size = new Size(100, 26),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+            AutoSize = true,
+            MinimumSize = new Size(100, 32),
+            Anchor = AnchorStyles.Right,
+            Margin = Padding.Empty,
         };
         customColorButton.Click += OnPickCustomColor;
 
@@ -188,9 +183,9 @@ internal sealed class RuleEditDialog : Form
         {
             Text = "OK",
             DialogResult = DialogResult.OK,
-            Location = new Point(638, 596),
-            Size = new Size(85, 30),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+            AutoSize = true,
+            MinimumSize = new Size(85, 32),
+            Margin = new Padding(0, 0, 8, 0),
         };
         _okButton.Click += OnOk;
 
@@ -198,18 +193,85 @@ internal sealed class RuleEditDialog : Form
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
-            Location = new Point(743, 596),
-            Size = new Size(85, 30),
-            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+            AutoSize = true,
+            MinimumSize = new Size(85, 32),
+            Margin = Padding.Empty,
         };
 
-        Controls.AddRange(new Control[]
+        var pickerFooter = new TableLayoutPanel
         {
-            pickLabel, _buttonList, refreshButton, _hint,
-            matchLabel, _matchBox, appIdLabel, _matchAppIdBox,
-            labelLabel, _labelBox, colorLabel, _colorPreview, swatches, customColorButton,
-            _okButton, cancelButton,
-        });
+            AutoSize = true,
+            ColumnCount = 2,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 10),
+        };
+        pickerFooter.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        pickerFooter.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        pickerFooter.Controls.Add(refreshButton, 0, 0);
+        pickerFooter.Controls.Add(_hint, 1, 0);
+
+        var detailsLayout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            ColumnCount = 5,
+            RowCount = 2,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 10),
+        };
+        detailsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        detailsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20));
+        detailsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        detailsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        detailsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        detailsLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        detailsLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        detailsLayout.Controls.Add(labelLabel, 0, 0);
+        detailsLayout.Controls.Add(_labelBox, 0, 1);
+        detailsLayout.Controls.Add(colorLabel, 2, 0);
+        detailsLayout.Controls.Add(_colorPreview, 2, 1);
+        detailsLayout.Controls.Add(swatches, 3, 1);
+        detailsLayout.Controls.Add(customColorButton, 4, 1);
+
+        var buttonLayout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            ColumnCount = 3,
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
+        };
+        buttonLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        buttonLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        buttonLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        buttonLayout.Controls.Add(_okButton, 1, 0);
+        buttonLayout.Controls.Add(cancelButton, 2, 0);
+
+        var layout = new TableLayoutPanel
+        {
+            ColumnCount = 1,
+            RowCount = 9,
+            Dock = DockStyle.Fill,
+            Padding = new Padding(12),
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.Controls.Add(pickLabel, 0, 0);
+        layout.Controls.Add(_buttonList, 0, 1);
+        layout.Controls.Add(pickerFooter, 0, 2);
+        layout.Controls.Add(matchLabel, 0, 3);
+        layout.Controls.Add(_matchBox, 0, 4);
+        layout.Controls.Add(appIdLabel, 0, 5);
+        layout.Controls.Add(_matchAppIdBox, 0, 6);
+        layout.Controls.Add(detailsLayout, 0, 7);
+        layout.Controls.Add(buttonLayout, 0, 8);
+        Controls.Add(layout);
 
         FitButtonToFont(refreshButton, 90);
         FitButtonToFont(customColorButton, 100);
@@ -224,13 +286,10 @@ internal sealed class RuleEditDialog : Form
 
     private static void FitButtonToFont(Button button, int minimumWidth)
     {
-        int bottom = button.Bottom;
+        button.AutoSize = true;
+        button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        button.MinimumSize = new Size(minimumWidth, 32);
         button.Padding = new Padding(10, 3, 10, 3);
-        Size preferred = button.GetPreferredSize(Size.Empty);
-        button.Size = new Size(
-            Math.Max(minimumWidth, preferred.Width),
-            Math.Max(32, preferred.Height));
-        button.Top = bottom - button.Height;
     }
 
     private void ResizeButtonColumns()
