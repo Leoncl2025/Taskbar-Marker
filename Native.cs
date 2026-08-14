@@ -131,32 +131,33 @@ internal static class Native
     };
 
     /// <summary>
-    /// True when the foreground window covers its entire monitor (a real full-screen app, not merely
-    /// maximized - a maximized window's rect overhangs the screen edges by the resize border, so it
-    /// is excluded explicitly via IsZoomed). Checked directly instead of via
-    /// SHQueryUserNotificationState, which also reports "busy" for Do Not Disturb / focus sessions.
+    /// Returns the monitor covered by the foreground window when it is genuinely full-screen.
+    /// Maximized windows are excluded explicitly because their rect overhangs the screen edges by
+    /// the resize border. Checked directly instead of via SHQueryUserNotificationState, which also
+    /// reports "busy" for Do Not Disturb / focus sessions.
     /// </summary>
-    public static bool IsForegroundWindowFullScreen()
+    public static Rectangle? GetForegroundFullScreenMonitorBounds()
     {
         IntPtr foreground = GetForegroundWindow();
         if (foreground == IntPtr.Zero || IsZoomed(foreground))
-            return false;
+            return null;
 
         var className = new StringBuilder(64);
         if (GetClassName(foreground, className, className.Capacity) > 0 &&
             Array.IndexOf(ShellWindowClasses, className.ToString()) >= 0)
         {
-            return false;
+            return null;
         }
 
         if (!GetWindowRect(foreground, out RECT raw))
-            return false;
+            return null;
 
         Rectangle rect = raw.ToRectangle();
         if (rect.Width <= 0 || rect.Height <= 0)
-            return false;
+            return null;
 
-        return rect.Contains(Screen.FromRectangle(rect).Bounds);
+        Rectangle monitorBounds = Screen.FromRectangle(rect).Bounds;
+        return rect.Contains(monitorBounds) ? monitorBounds : null;
     }
 
     public static string DescribeForegroundWindow()

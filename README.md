@@ -127,8 +127,9 @@ rule each one matched. Useful when a rule does not fire:
 
 - **Windows 11 only.** Windows 10 exposes its taskbar differently.
 - **Horizontal taskbars only.** Vertical ones are skipped.
-- Overlays hide automatically while a genuinely full-screen app is in front, and while
-  the taskbar is slid away by auto-hide.
+- An overlay hides automatically only on the display containing the foreground full-screen
+  app. Markers on other displays remain visible. Overlays also hide while their taskbar is
+  slid away by auto-hide.
 - With taskbar grouping on, two windows of the same app share one button. Use
   `matchAppId` to tell them apart, or turn grouping off (Settings → Personalization →
   Taskbar → Taskbar behaviors → Combine taskbar buttons → Never) to get one button per

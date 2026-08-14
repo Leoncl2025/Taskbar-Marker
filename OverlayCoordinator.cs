@@ -44,7 +44,7 @@ internal sealed class OverlayCoordinator : IDisposable
 
     public async Task TickAsync()
     {
-        if (_paused || _settings.Rules.Count == 0 || Native.IsForegroundWindowFullScreen())
+        if (_paused || _settings.Rules.Count == 0)
         {
             HideAll();
             return;
@@ -59,11 +59,20 @@ internal sealed class OverlayCoordinator : IDisposable
 
         bool appButtonsOnly = !_settings.Raw.IncludeAllButtons;
         List<ScanResult> results = await Task.Run(() => ScanAll(taskbars, appButtonsOnly)).ConfigureAwait(true);
+        Rectangle? fullScreenMonitor = Native.GetForegroundFullScreenMonitorBounds();
 
         var seen = new HashSet<IntPtr>();
         foreach (ScanResult result in results)
         {
             seen.Add(result.TaskbarHwnd);
+
+            Rectangle screenBounds = Screen.FromRectangle(result.TaskbarRect).Bounds;
+            if (fullScreenMonitor is Rectangle hiddenScreen && hiddenScreen == screenBounds)
+            {
+                if (_overlays.TryGetValue(result.TaskbarHwnd, out TaskbarOverlay? existing))
+                    existing.Hide();
+                continue;
+            }
 
             var marks = new List<Mark>();
             foreach (TaskbarButton button in result.Buttons)
@@ -80,7 +89,6 @@ internal sealed class OverlayCoordinator : IDisposable
             }
 
             TaskbarOverlay overlay = GetOverlay(result.TaskbarHwnd);
-            Rectangle screenBounds = Screen.FromRectangle(result.TaskbarRect).Bounds;
             overlay.Render(result.TaskbarRect, screenBounds, marks, _settings.Raw);
         }
 

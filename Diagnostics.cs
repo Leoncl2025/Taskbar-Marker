@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,7 +25,9 @@ internal static class Diagnostics
         report.AppendLine($"Captured {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         report.AppendLine();
 
-        report.AppendLine($"Foreground window is full screen (overlays hidden): {Native.IsForegroundWindowFullScreen()}");
+        Rectangle? fullScreenMonitor = Native.GetForegroundFullScreenMonitorBounds();
+        report.AppendLine(
+            $"Foreground full-screen monitor (overlay hidden there only): {fullScreenMonitor?.ToString() ?? "(none)"}");
         report.AppendLine($"Foreground window: {Native.DescribeForegroundWindow()}");
 
         Settings settings = File.Exists(Settings.DefaultPath)
