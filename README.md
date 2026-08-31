@@ -16,18 +16,27 @@ UI Automation and paints a click-through overlay on top of it.
 
 ## Download
 
-Download the latest portable build from [GitHub Releases](https://github.com/Leoncl2025/Taskbar-Marker/releases/latest),
-extract `TaskbarMarker-win-x64.zip`, and run `TaskbarMarker.exe`. The release bundles the
-.NET 8 runtime and requires neither installation nor administrator rights.
+Download `Leoncl2025.TaskbarMarker-win-Setup.exe` from the
+[latest GitHub Release](https://github.com/Leoncl2025/Taskbar-Marker/releases/latest).
+It installs for the current user, requires no administrator rights, and adds a Start menu
+shortcut. A self-updating `Leoncl2025.TaskbarMarker-win-Portable.zip` is also available for
+users who prefer not to install it. Extract it and run the top-level `Taskbar Marker.exe`
+launcher. Both packages bundle the .NET 8 runtime.
 
-Each release includes a `.sha256` file. To verify the downloaded archive:
+Releases before v0.2.0 used a plain portable ZIP. Install or extract v0.2.0 once to move to
+Velopack; subsequent releases can update themselves.
 
-```powershell
-(Get-FileHash .\TaskbarMarker-win-x64.zip -Algorithm SHA256).Hash
-```
+The executable is currently unsigned, so Windows SmartScreen may show a warning on first run.
 
-Compare the result with `TaskbarMarker-win-x64.zip.sha256` on the release page. The
-executable is currently unsigned, so Windows SmartScreen may show a warning on first run.
+## Updates
+
+The installed and Velopack portable builds check GitHub Releases shortly after startup. When an
+update is available, the tray icon shows a notification and its menu offers **Install update**.
+The package downloads in the background, is verified against the release feed, and is applied
+after Taskbar Marker exits; the updated app then restarts automatically.
+
+Use **Check for updates...** in the tray menu to check manually. Development builds run normally
+but do not offer updates because they are not inside a Velopack installation or portable package.
 
 ## How it works
 

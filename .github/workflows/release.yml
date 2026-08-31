@@ -21,17 +21,29 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Publish Windows x64 package
+      - name: Restore packaging tools
+        run: dotnet tool restore
+
+      - name: Package and publish Windows x64 release
+        env:
+          VPK_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
           $publishDir = Join-Path $env:RUNNER_TEMP "publish"
-          $artifactDir = Join-Path $env:GITHUB_WORKSPACE "artifacts"
-          New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+          $releaseDir = Join-Path $env:RUNNER_TEMP "releases"
+          $version = $env:GITHUB_REF_NAME.TrimStart("v")
+
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$') {
+            throw "Tag $env:GITHUB_REF_NAME is not a supported SemVer version."
+          }
+
+          New-Item -ItemType Directory -Path $publishDir, $releaseDir -Force | Out-Null
 
           dotnet publish TaskbarMarker.csproj `
             --configuration Release `
             --runtime win-x64 `
             --self-contained true `
+            -p:Version=$version `
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:EnableCompressionInSingleFile=true `
@@ -39,21 +51,65 @@ jobs:
             -p:DebugSymbols=false `
             --output $publishDir
 
-          $archiveName = "TaskbarMarker-win-x64.zip"
-          $archivePath = Join-Path $artifactDir $archiveName
-          Compress-Archive -Path (Join-Path $publishDir "*") -DestinationPath $archivePath
+          # A clean runner has no previous full package. Download it when available so vpk can
+          # create a small delta; v0.2.0 is the first Velopack release, so none is expected once.
+          dotnet tool run vpk -- download github `
+            --outputDir $releaseDir `
+            --channel win `
+            --repoUrl "https://github.com/Leoncl2025/Taskbar-Marker" `
+            --token $env:VPK_TOKEN
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Could not download the previous release; creating a full package only."
+            Remove-Item (Join-Path $releaseDir "*") -Recurse -Force -ErrorAction SilentlyContinue
+          } elseif (-not (Get-ChildItem $releaseDir -Filter "*-full.nupkg" -File)) {
+            Write-Host "No previous Velopack release found; creating a full package only."
+          }
 
-          $hash = (Get-FileHash $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-          Set-Content -Path "$archivePath.sha256" -Value "$hash  $archiveName" -Encoding ascii -NoNewline
+          dotnet tool run vpk -- pack `
+            --packId "Leoncl2025.TaskbarMarker" `
+            --packVersion $version `
+            --packDir $publishDir `
+            --mainExe "TaskbarMarker.exe" `
+            --packTitle "Taskbar Marker" `
+            --packAuthors "Leon C" `
+            --runtime win-x64 `
+            --channel win `
+            --shortcuts StartMenuRoot `
+            --outputDir $releaseDir
+          if ($LASTEXITCODE -ne 0) { throw "Velopack packaging failed." }
 
-      - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: pwsh
-        run: |
-          gh release create $env:GITHUB_REF_NAME `
-            artifacts/TaskbarMarker-win-x64.zip `
-            artifacts/TaskbarMarker-win-x64.zip.sha256 `
-            --title "Taskbar Marker $env:GITHUB_REF_NAME" `
-            --generate-notes `
-            --verify-tag
+          $setup = Join-Path $releaseDir "Leoncl2025.TaskbarMarker-win-Setup.exe"
+          $portable = Join-Path $releaseDir "Leoncl2025.TaskbarMarker-win-Portable.zip"
+          $fullPackage = Join-Path $releaseDir "Leoncl2025.TaskbarMarker-$version-full.nupkg"
+          $feedPath = Join-Path $releaseDir "releases.win.json"
+          foreach ($required in @($setup, $portable, $fullPackage, $feedPath)) {
+            if (-not (Test-Path $required)) { throw "Missing release artifact: $required" }
+          }
+
+          $feed = Get-Content $feedPath -Raw | ConvertFrom-Json
+          $release = $feed.Assets | Where-Object {
+            $_.PackageId -eq "Leoncl2025.TaskbarMarker" -and
+            $_.Version -eq $version -and
+            $_.Type -eq "Full"
+          }
+          if (-not $release -or [string]::IsNullOrWhiteSpace($release.SHA256)) {
+            throw "releases.win.json does not contain a hashed full package for $version."
+          }
+
+          $portableTest = Join-Path $env:RUNNER_TEMP "portable-test"
+          Expand-Archive $portable -DestinationPath $portableTest
+          foreach ($relative in @(".portable", "Taskbar Marker.exe", "current/sq.version", "current/TaskbarMarker.exe")) {
+            if (-not (Test-Path (Join-Path $portableTest $relative))) {
+              throw "Portable package is missing: $relative"
+            }
+          }
+
+          dotnet tool run vpk -- upload github `
+            --outputDir $releaseDir `
+            --channel win `
+            --repoUrl "https://github.com/Leoncl2025/Taskbar-Marker" `
+            --token $env:VPK_TOKEN `
+            --tag $env:GITHUB_REF_NAME `
+            --releaseName "Taskbar Marker $env:GITHUB_REF_NAME" `
+            --publish
+          if ($LASTEXITCODE -ne 0) { throw "Velopack upload failed." }

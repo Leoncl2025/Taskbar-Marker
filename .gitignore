@@ -4,6 +4,7 @@ obj/
 *.suo
 .vs/
 publish/
+Releases/
 
 # Per-user data. This file can contain machine names and connection IDs.
 rules.json

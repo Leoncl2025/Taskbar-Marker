@@ -4,8 +4,10 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using Velopack;
 
 namespace TaskbarMarker;
 
@@ -14,6 +16,8 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        VelopackApp.Build().Run();
+
         // Must run before any window exists so UIA's physical-pixel rectangles line up
         // with the coordinates we pass to SetWindowPos / UpdateLayeredWindow.
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
@@ -87,7 +91,11 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly OverlayCoordinator _coordinator;
     private readonly ToolStripMenuItem _pauseItem;
     private readonly ToolStripMenuItem _startupItem;
+    private readonly ToolStripMenuItem _updateItem;
+    private readonly System.Windows.Forms.Timer _updateTimer;
+    private readonly AppUpdater? _updater;
     private readonly string _rulesPath = Settings.DefaultPath;
+    private CancellationTokenSource? _updateCancellation;
     private FileSystemWatcher? _watcher;
     private RulesEditorForm? _editor;
     private IntPtr _trayIconHandle;
@@ -100,6 +108,7 @@ internal sealed class TrayAppContext : ApplicationContext
 
         Settings settings = LoadSettings(out string? loadError);
         _coordinator = new OverlayCoordinator(settings);
+        _updater = AppUpdater.CreateIfSupported();
 
         _pauseItem = new ToolStripMenuItem("Pause", null, OnTogglePause) { CheckOnClick = true };
         _startupItem = new ToolStripMenuItem("Start with Windows", null, OnToggleStartup)
@@ -112,6 +121,13 @@ internal sealed class TrayAppContext : ApplicationContext
         {
             Font = new Font(SystemFonts.MenuFont!, FontStyle.Bold),
         };
+        _updateItem = new ToolStripMenuItem(
+            _updater is null ? "Updates require the installed or portable build" : "Check for updates...",
+            null,
+            OnCheckForUpdates)
+        {
+            Enabled = _updater is not null,
+        };
 
         var menu = new ContextMenuStrip();
         menu.Items.Add(editItem);
@@ -121,6 +137,7 @@ internal sealed class TrayAppContext : ApplicationContext
         menu.Items.Add(new ToolStripMenuItem("Open rules.json", null, OnOpenRulesFile));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_startupItem);
+        menu.Items.Add(_updateItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Exit", null, OnExit));
 
@@ -139,6 +156,11 @@ internal sealed class TrayAppContext : ApplicationContext
         };
         _timer.Tick += OnTick;
         _timer.Start();
+
+        _updateTimer = new System.Windows.Forms.Timer { Interval = 10_000 };
+        _updateTimer.Tick += OnAutomaticUpdateCheck;
+        if (_updater is not null)
+            _updateTimer.Start();
 
         StartWatchingRulesFile();
 
@@ -212,6 +234,106 @@ internal sealed class TrayAppContext : ApplicationContext
     }
 
     private void OnTogglePause(object? sender, EventArgs e) => _coordinator.Paused = _pauseItem.Checked;
+
+    private async void OnAutomaticUpdateCheck(object? sender, EventArgs e)
+    {
+        _updateTimer.Stop();
+        await CheckForUpdatesAsync(interactive: false);
+    }
+
+    private async void OnCheckForUpdates(object? sender, EventArgs e)
+    {
+        if (_updater is null)
+            return;
+
+        if (_updater.AvailableVersion is not null)
+            await ConfirmAndInstallUpdateAsync();
+        else
+            await CheckForUpdatesAsync(interactive: true);
+    }
+
+    private async Task CheckForUpdatesAsync(bool interactive)
+    {
+        if (_updater is null || !_updateItem.Enabled)
+            return;
+
+        _updateItem.Enabled = false;
+        _updateItem.Text = "Checking for updates...";
+        try
+        {
+            if (await _updater.CheckForUpdatesAsync())
+            {
+                _updateItem.Text = $"Install update v{_updater.AvailableVersion}...";
+                _updateItem.Enabled = true;
+
+                if (interactive)
+                    await ConfirmAndInstallUpdateAsync();
+                else
+                    Notify($"Version {_updater.AvailableVersion} is ready to install.", ToolTipIcon.Info);
+            }
+            else
+            {
+                ResetUpdateMenu();
+                if (interactive)
+                    Notify("Taskbar Marker is up to date.", ToolTipIcon.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            ResetUpdateMenu();
+            if (interactive)
+                Notify($"Could not check for updates: {ex.Message}", ToolTipIcon.Error);
+            else
+                Debug.WriteLine($"[TaskbarMarker] update check failed: {ex}");
+        }
+    }
+
+    private async Task ConfirmAndInstallUpdateAsync()
+    {
+        if (_updater?.AvailableVersion is not string version)
+            return;
+
+        DialogResult answer = MessageBox.Show(
+            $"Taskbar Marker {version} is available. Download it and restart now?",
+            "Taskbar Marker update",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Information);
+        if (answer != DialogResult.Yes)
+            return;
+
+        _updateItem.Enabled = false;
+        _updateCancellation = new CancellationTokenSource();
+        try
+        {
+            var progress = new Progress<int>(percent =>
+                _updateItem.Text = $"Downloading update... {percent}%");
+            await _updater.DownloadAsync(progress, _updateCancellation.Token);
+            _updateItem.Text = "Restarting to install update...";
+            _updater.ApplyAndRestart();
+        }
+        catch (OperationCanceledException)
+        {
+            ResetUpdateMenu();
+        }
+        catch (Exception ex)
+        {
+            ResetUpdateMenu();
+            Notify($"Could not install update: {ex.Message}", ToolTipIcon.Error);
+        }
+        finally
+        {
+            _updateCancellation.Dispose();
+            _updateCancellation = null;
+        }
+    }
+
+    private void ResetUpdateMenu()
+    {
+        _updateItem.Text = _updater?.AvailableVersion is string version
+            ? $"Install update v{version}..."
+            : "Check for updates...";
+        _updateItem.Enabled = _updater is not null;
+    }
 
     private void ReloadFromDisk(bool announce)
     {
@@ -306,6 +428,8 @@ internal sealed class TrayAppContext : ApplicationContext
 
     private void OnExit(object? sender, EventArgs e)
     {
+        _updateCancellation?.Cancel();
+        _updateTimer.Stop();
         _timer.Stop();
         _trayIcon.Visible = false;
         ExitThread();
@@ -335,6 +459,10 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         if (disposing)
         {
+            _updateCancellation?.Cancel();
+            _updateCancellation?.Dispose();
+            _updateTimer.Stop();
+            _updateTimer.Dispose();
             _timer.Stop();
             _timer.Dispose();
             _watcher?.Dispose();
